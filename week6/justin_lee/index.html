@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Socket.IO chat</title>
+    <style>
+      body { margin: 0; padding-bottom: 3rem; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+
+      #form { background: rgba(0, 0, 0, 0.15); padding: 0.25rem; position: fixed; bottom: 0; left: 0; right: 0; display: flex; height: 3rem; box-sizing: border-box; backdrop-filter: blur(10px); }
+      #input { border: none; padding: 0 1rem; flex-grow: 1; border-radius: 2rem; margin: 0.25rem; }
+      #input:focus { outline: none; }
+      #form > button { background: #333; border: none; padding: 0 1rem; margin: 0.25rem; border-radius: 3px; outline: none; color: #fff; }
+
+      #messages { list-style-type: none; margin: 0; padding: 0; }
+      #messages > li { padding: 0.5rem 1rem; }
+      #messages > li:nth-child(odd) { background: #efefef; }
+    </style>
+  </head>
+  <body>
+    <h1><span id="counter">0</span> Cookies</h1>
+    <ul id="messages"></ul>
+    <form id="form" action="">
+      <input id="input" autocomplete="off" placeholder="Type a message..."/><button>Send</button>
+    </form>
+
+    <h2>Upload an Image</h2>
+    <input type="file" id="image-input" accept="image/*" />
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+    var socket = io();
+
+    var messages = document.getElementById('messages');
+    var form = document.getElementById('form');
+    var input = document.getElementById('input');
+    var imageInput = document.getElementById('image-input');
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (input.value) {
+          socket.emit('chat message', input.value);
+          input.value = '';
+        }
+    });
+
+    imageInput.addEventListener('change', function(e) {
+        var file = e.target.files[0];
+        if (file) {
+            var reader = new FileReader();
+            reader.onloadend = function() {
+                // Send the image data as a base64 string
+                socket.emit('send-image', reader.result);
+                addMessage('<strong>Image sent!</strong>');
+            };
+            reader.readAsDataURL(file);  // Read image as base64 string
+        }
+    });
+
+    function addMessage(msg) {
+      var item = document.createElement('li');
+
+      if (msg.startsWith('data:image')) {
+            var img = document.createElement('img');
+            img.src = msg;
+            img.style.maxWidth = '300px'; 
+            img.style.maxHeight = '300px';
+            item.appendChild(img);
+        } else {
+            item.innerHTML = msg;
+        }
+
+      messages.appendChild(item);
+      window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    socket.on('connected', addMessage);
+    socket.on('dc', addMessage);
+    socket.on('chat message', addMessage);
+    socket.on('image-received', function(base64Image) {
+      addMessage(base64Image);
+    });
+    </script>
+  </body>
+</html>
